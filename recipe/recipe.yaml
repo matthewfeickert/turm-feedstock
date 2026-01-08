@@ -10,7 +10,7 @@ source:
   sha256: 93d12cc663073548d413b669354477bce11ee52ebc297ea212b6aa6a808b9250
 
 build:
-  number: 0
+  number: 1
   skip:
     - not linux
   script:
@@ -20,6 +20,22 @@ build:
     content:
       - cargo auditable install --locked --no-track --bins --root ${{ PREFIX }} --path .
       - cargo-bundle-licenses --format yaml --output ./THIRDPARTY.yml
+      # Default to no cross-compile
+      - export TURM="${PREFIX}/bin/turm"
+
+      - if: target_platform != build_platform
+        then:
+          # Need to compile for the build_platform arch
+          - cargo auditable install --locked --no-track --bins --root ${BUILD_PREFIX} --path .
+          - export TURM="${BUILD_PREFIX}/bin/turm"
+
+      # Install bash, zsh, and fish completions
+      - mkdir -p ${PREFIX}/share/bash-completion/completions
+      - ${TURM} completion bash > ${PREFIX}/share/bash-completion/completions/turm
+      - mkdir -p ${PREFIX}/share/zsh/site-functions
+      - ${TURM} completion zsh > ${PREFIX}/share/zsh/site-functions/_turm
+      - mkdir -p ${PREFIX}/share/fish/vendor_completions.d
+      - ${TURM} completion fish > ${PREFIX}/share/fish/vendor_completions.d/turm.fish
 
 requirements:
   build:
@@ -34,6 +50,10 @@ tests:
       strict: true
       bin:
        - turm
+      files:
+        - share/bash-completion/completions/turm
+        - share/zsh/site-functions/_turm
+        - share/fish/vendor_completions.d/turm.fish
   - script: turm --help
 
 about:
